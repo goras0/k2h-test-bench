@@ -1,6 +1,7 @@
 package se.test.k2htestbench;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -8,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.core.KafkaTemplate;
 import se.test.k2htestbench.domain.User;
 import se.test.k2htestbench.producer.Producer;
+import se.test.k2htestbench.service.HubClient;
 
 import java.io.*;
 import java.net.URL;
@@ -15,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @SpringBootApplication
 public class K2hTestBenchApplication {
 	static String TEST_CASE_PATH = "testcases";
@@ -29,27 +32,24 @@ public class K2hTestBenchApplication {
 	public ApplicationRunner runner(KafkaTemplate<Object, Object> template, HubClient hubClient) {
 		return args -> {
 			K2hTestBenchApplication app = new K2hTestBenchApplication();
-			Producer prod = new Producer(template);
+			Producer producer = new Producer(template);
 			try {
 				// get all test cases
 				List<URL> fileList = getResources(TEST_CASE_PATH);
 
 				for(URL url : fileList){
 					TestCase tc = getTestCase(url);
-					prod.doTest(tc);
+					log.info("======================================");
+					log.info("Running test case : {}", tc.getName());
 
-					// wait 1 sec
-					try {
-						Thread.currentThread().wait(1000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+					// send data to pipeline under test
+					producer.send(tc.getInData());
 
 					// call hub to see result
 					String response = hubClient.getData(tc);
 
 					// Save response to file, ./output/<testcase>
-					saveToFile("./output/"+tc.getName(), response);
+					saveToFile("./output/"+tc.getName().replace(".", "-result."), response);
 				}
 
 			} catch (IOException e) {

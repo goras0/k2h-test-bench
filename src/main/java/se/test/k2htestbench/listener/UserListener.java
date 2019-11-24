@@ -25,13 +25,4 @@ public class UserListener {
         log.info("Received: " + data);
     }
 
-    private void writeToFile(String data){
-        Path path = Paths.get(outfile);
-        Charset charset = Charset.forName("UTF-8");
-        try (BufferedWriter writer = Files.newBufferedWriter( path, charset)) {
-            writer.write(data, 0, data.length());
-        } catch (IOException x) {
-            System.err.format("IOException: %s%n", x);
-        }
-    }
 }
